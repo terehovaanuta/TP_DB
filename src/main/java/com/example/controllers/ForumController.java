@@ -1,5 +1,6 @@
 package com.example.controllers;
 
+import com.example.CopyPasteWrappingDetails;
 import com.example.DbUtils;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.json.JSONArray;
@@ -129,10 +130,10 @@ public class ForumController {
     @RequestMapping("db/api/forum/listPosts")
     public String listPosts(@RequestBody(required = false) String payload,
                             @RequestParam String forum,
-                            @RequestParam String since,
-                            @RequestParam String order,
-                            @RequestParam Integer limit,
-                            @RequestParam("related") ArrayList<String> related) {
+                            @RequestParam(required = false) String since,
+                            @RequestParam(required = false) String order,
+                            @RequestParam(required = false) Integer limit,
+                            @RequestParam(value = "related", required = false) ArrayList<String> related) {
         Connection conn = null;
         JSONArray relatedArray;
         ArrayList<String> relatedList = new ArrayList<>();
@@ -165,7 +166,9 @@ public class ForumController {
                 return error.toString();
             }
         } else{
-            relatedList = related;
+            if (related != null) {
+                relatedList = related;
+            }
             if (order == null) {
                 order = "desc";
             }
@@ -179,10 +182,11 @@ public class ForumController {
         try {
             conn = DriverManager.getConnection("jdbc:mysql://localhost/DB_TP", "user1", "123");
             JSONObject object = new JSONObject();
-            JSONArray object_in = DbUtils.getForumPostsList(conn, relatedList, forum, order, since, limit);
+            JSONArray object_in = CopyPasteWrappingDetails.getForumPostsList(conn, relatedList, forum, order, since, limit);
             object.put("code", 0);
             object.put("response", object_in);
-//            return object;
+//
+            System.out.println(object.toString());
             return object.toString();
         } catch (SQLException e) {
             e.printStackTrace();
