@@ -182,7 +182,7 @@ public class ForumController {
         try {
             conn = DriverManager.getConnection("jdbc:mysql://localhost/DB_TP", "user1", "123");
             JSONObject object = new JSONObject();
-            JSONArray object_in = CopyPasteWrappingDetails.getForumPostsList(conn, relatedList, forum, order, since, limit);
+            JSONArray object_in = DbUtils.getForumPostsList(conn, relatedList, forum, order, since, limit);
             object.put("code", 0);
             object.put("response", object_in);
 //

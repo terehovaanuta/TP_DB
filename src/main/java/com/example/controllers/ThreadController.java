@@ -20,6 +20,15 @@ public class ThreadController {
     private final String GET_USER_QUERY = "SELECT * FROM users WHERE email = ?;";
     private final String GET_FORUM_QUERY = "SELECT * FROM forums WHERE short_name = ?;";
     private final String GET_THREAD_QUERY = "SELECT * FROM threads WHERE title = ?;";
+    private final String CLOSE_THREAD_QUERY = "UPDATE threads SET isClosed = TRUE WHERE id = ?;";
+    private final String OPEN_THREAD_QUERY = "UPDATE threads SET isClosed = FALSE WHERE id = ?;";
+    private final String REMOVE_THREAD_QUERY = "UPDATE threads SET isDeleted = TRUE WHERE id = ?;";
+    private final String REMOVE_POST_QUERY = "UPDATE posts SET isDeleted = TRUE WHERE thread = ?;";
+
+    private final String RESTORE_THREAD_QUERY = "UPDATE threads SET isDeleted = FALSE WHERE id = ?;";
+    private final String RESTORE_POST_QUERY = "UPDATE posts SET isDeleted = FALSE WHERE thread = ?;";
+
+    private final String UPDATE_THREAD_QUERY = "UPDATE threads SET message = ?, slug = ? WHERE id = ?;";
 
     @RequestMapping("db/api/thread/create")
     public String createThread(@RequestBody String payload) {
@@ -122,7 +131,7 @@ public class ThreadController {
 
 
     @RequestMapping("db/api/thread/details")
-    public String threadDetails(@RequestBody(required = false) String payload, @RequestParam Integer thread, @RequestParam("related") ArrayList<String> related){
+    public String threadDetails(@RequestBody(required = false) String payload, @RequestParam Integer thread, @RequestParam(value = "related", required = false) ArrayList<String> related){
         Connection conn = null;
         JSONArray relatedArray;
         ArrayList<String> relatedList = new ArrayList<>();
@@ -172,4 +181,192 @@ public class ThreadController {
             return new JSONObject();
         }
     }
+
+    @RequestMapping("db/api/thread/close")
+    public String closeThread(@RequestBody String payload) {
+        Connection conn = null;
+        JSONObject object = new JSONObject(payload);
+        Integer thread = null;
+        thread = object.getInt("thread");
+        if (thread == 0) {
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+        try {
+            conn = DriverManager.getConnection("jdbc:mysql://localhost/DB_TP", "user1", "123");
+            PreparedStatement statement = conn.prepareStatement(CLOSE_THREAD_QUERY);
+            statement.setInt(1, thread);
+            statement.executeUpdate();
+            JSONObject answer = new JSONObject();
+            answer.put("code", 0);
+            JSONObject idObject = new JSONObject();
+            idObject.put("thread", thread);
+            answer.put("response", idObject);
+            return answer.toString();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+
+    }
+
+    @RequestMapping("db/api/thread/open")
+    public String openThread(@RequestBody String payload) {
+        Connection conn = null;
+        JSONObject object = new JSONObject(payload);
+        Integer thread = null;
+        thread = object.getInt("thread");
+        if (thread == 0) {
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+        try {
+            conn = DriverManager.getConnection("jdbc:mysql://localhost/DB_TP", "user1", "123");
+            PreparedStatement statement = conn.prepareStatement(OPEN_THREAD_QUERY);
+            statement.setInt(1, thread);
+            statement.executeUpdate();
+            JSONObject answer = new JSONObject();
+            answer.put("code", 0);
+            JSONObject idObject = new JSONObject();
+            idObject.put("thread", thread);
+            answer.put("response", idObject);
+            return answer.toString();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+
+    }
+
+    @RequestMapping("db/api/thread/remove")
+    public String removeThread(@RequestBody String payload) {
+        Connection conn = null;
+        JSONObject object = new JSONObject(payload);
+        Integer thread = null;
+        thread = object.getInt("thread");
+        if (thread == 0) {
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        } try {
+            conn = DriverManager.getConnection("jdbc:mysql://localhost/DB_TP", "user1", "123");
+            // Delete thread
+            PreparedStatement statement = conn.prepareStatement(REMOVE_THREAD_QUERY);
+            statement.setInt(1, thread);
+            statement.executeUpdate();
+
+            // Delete all posts with specific thread
+            PreparedStatement statement2 = conn.prepareStatement(REMOVE_POST_QUERY);
+            statement2.setInt(1, thread);
+            statement2.executeUpdate();
+
+            JSONObject answer = new JSONObject();
+            answer.put("code", 0);
+            JSONObject idObject = new JSONObject();
+            idObject.put("thread", thread);
+            answer.put("response", idObject);
+            return answer.toString();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+
+    }
+
+
+    @RequestMapping("db/api/thread/restore")
+    public String restoreThread(@RequestBody String payload) {
+        Connection conn = null;
+        JSONObject object = new JSONObject(payload);
+        Integer thread = null;
+        thread = object.getInt("thread");
+        if (thread == 0) {
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+        try {
+            conn = DriverManager.getConnection("jdbc:mysql://localhost/DB_TP", "user1", "123");
+            PreparedStatement statement = conn.prepareStatement(RESTORE_THREAD_QUERY);
+            statement.setInt(1, thread);
+            statement.executeUpdate();
+
+            // Restore all posts with specific thread
+            PreparedStatement statement2 = conn.prepareStatement(RESTORE_POST_QUERY);
+            statement2.setInt(1, thread);
+            statement2.executeUpdate();
+            JSONObject answer = new JSONObject();
+            answer.put("code", 0);
+            JSONObject idObject = new JSONObject();
+            idObject.put("thread", thread);
+            answer.put("response", idObject);
+            return answer.toString();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+
+    }
+
+
+
+    @RequestMapping("db/api/thread/update")
+    public String updateThread(@RequestBody String payload) {
+        Connection conn = null;
+        JSONObject object = new JSONObject(payload);
+        Integer thread = null;
+        String message = null;
+        String slug = null;
+        slug = object.getString("slug");
+        thread = object.getInt("thread");
+        message = object.getString("message");
+        if (thread == 0) {
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        } try {
+            conn = DriverManager.getConnection("jdbc:mysql://localhost/DB_TP", "user1", "123");
+            // Delete thread
+            PreparedStatement statement = conn.prepareStatement(UPDATE_THREAD_QUERY);
+            statement.setString(1, message);
+            statement.setString(2, slug);
+            statement.setInt(3, thread);
+            statement.executeUpdate();
+
+
+            JSONObject answer = new JSONObject();
+            answer.put("code", 0);
+            JSONObject idObject = new JSONObject();
+            idObject.put("thread", thread);
+            answer.put("response", DbUtils.getThreadInfo(conn, thread, new ArrayList<String>()));
+            return answer.toString();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+
+    }
+
 }

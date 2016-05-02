@@ -27,6 +27,12 @@ public class PostController {
     private final String GET_POST_QUERY = "SELECT * FROM posts WHERE message = ? AND user = ? AND thread = ?;";
 
     private final String DETALIS_POST_TABLE = "SELECT * FROM posts WHERE post = ?;";
+
+    private final String REMOVE_POST_QUERY = "UPDATE posts SET isDeleted = TRUE WHERE id = ?;";
+    private final String RESTORE_POST_QUERY = "UPDATE posts SET isDeleted = FALSE WHERE id = ?;";
+
+    private final String UPDATE_POST_QUERY = "UPDATE posts SET message = ? WHERE id = ?;";
+
     @RequestMapping("db/api/post/create")
     public String createPost(@RequestBody String payload) {
         JSONObject object = new JSONObject(payload);
@@ -191,7 +197,8 @@ public class PostController {
     }
 
     @RequestMapping("db/api/post/details")
-    public String postDetails(@RequestBody(required = false) String payload, @RequestParam Integer post, @RequestParam("related") ArrayList<String> related){
+    public String postDetails(@RequestBody(required = false) String payload, @RequestParam Integer post,
+                              @RequestParam(value = "related", required = false) ArrayList<String> related){
         Connection conn = null;
         JSONArray relatedArray;
         ArrayList<String> relatedList = new ArrayList<>();
@@ -238,4 +245,117 @@ public class PostController {
             return new JSONObject();
         }
     }
+
+
+
+    @RequestMapping("db/api/post/remove")
+    public String removePost(@RequestBody String payload) {
+        Connection conn = null;
+        JSONObject object = new JSONObject(payload);
+        Integer post = null;
+        post = object.getInt("post");
+        if (post == 0) {
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        } try {
+            conn = DriverManager.getConnection("jdbc:mysql://localhost/DB_TP", "user1", "123");
+            // Delete thread
+            PreparedStatement statement = conn.prepareStatement(REMOVE_POST_QUERY);
+            statement.setInt(1, post);
+            statement.executeUpdate();
+
+
+            JSONObject answer = new JSONObject();
+            answer.put("code", 0);
+            JSONObject idObject = new JSONObject();
+            idObject.put("post", post);
+            answer.put("response", idObject);
+            return answer.toString();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+
+    }
+
+
+    @RequestMapping("db/api/post/restore")
+    public String restorePost(@RequestBody String payload) {
+        Connection conn = null;
+        JSONObject object = new JSONObject(payload);
+        Integer post = null;
+        post = object.getInt("post");
+        if (post == 0) {
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        } try {
+            conn = DriverManager.getConnection("jdbc:mysql://localhost/DB_TP", "user1", "123");
+            // Delete thread
+            PreparedStatement statement = conn.prepareStatement(RESTORE_POST_QUERY);
+            statement.setInt(1, post);
+            statement.executeUpdate();
+
+
+            JSONObject answer = new JSONObject();
+            answer.put("code", 0);
+            JSONObject idObject = new JSONObject();
+            idObject.put("post", post);
+            answer.put("response", idObject);
+            return answer.toString();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+
+    }
+
+
+    @RequestMapping("db/api/post/update")
+    public String updatePost(@RequestBody String payload) {
+        Connection conn = null;
+        JSONObject object = new JSONObject(payload);
+        Integer post = null;
+        String message = null;
+        post = object.getInt("post");
+        message = object.getString("message");
+        if (post == 0) {
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        } try {
+            conn = DriverManager.getConnection("jdbc:mysql://localhost/DB_TP", "user1", "123");
+            // Delete thread
+            PreparedStatement statement = conn.prepareStatement(UPDATE_POST_QUERY);
+            statement.setString(1, message);
+            statement.setInt(2, post);
+            statement.executeUpdate();
+
+
+            JSONObject answer = new JSONObject();
+            answer.put("code", 0);
+            JSONObject idObject = new JSONObject();
+            idObject.put("post", post);
+            answer.put("response", DbUtils.getPostInfo(conn, post, new ArrayList<String>()));
+            return answer.toString();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+
+    }
+
 }

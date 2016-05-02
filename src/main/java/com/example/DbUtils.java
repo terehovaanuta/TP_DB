@@ -25,9 +25,11 @@ public class DbUtils {
 
 
     private static final String GET_FORUM_LIST_POSTS_MAIN = "SELECT * FROM forums LEFT JOIN posts ON forums.short_name = posts.forum ";
-    private static final String GET_FORUM_LIST_POSTS_MAIN_CLAUSE = "WHERE posts.date > ? AND posts.forum = ? ";
-    private static final String GET_FORUM_LIST_POSTS_ORDER_BY = "ORDER BY ? ";
+    private static final String GET_FORUM_LIST_POSTS_MAIN_CLAUSE = "WHERE posts.forum = ? AND posts.date > ?";
+    private static final String GET_FORUM_LIST_POSTS_ORDER_BY = "ORDER BY posts.date ";
     private static final String GET_FORUM_LIST_POSTS_LIMIT = "LIMIT ? ";
+
+    private static final String GET_COUNT_POSTS = "SELECT COUNT(*) FROM posts WHERE thread = ? AND isDeleted = 0";
 
     public static JSONObject getUserInfo(Connection conn, String email) {
         try {
@@ -139,11 +141,16 @@ public class DbUtils {
                 object_in.put("user", DbUtils.getUserInfo(conn, resultSet.getString("user")));
             }
 
-            if (!isForumRelated) {
+            if (isForumRelated) {
                 object_in.put("forum", DbUtils.getForumInfo(conn, resultSet.getString("forum"), null));
             } else {
                 object_in.put("forum", resultSet.getString("forum"));
             }
+            PreparedStatement statement3 = conn.prepareStatement(GET_COUNT_POSTS);
+            statement3.setInt(1, thread);
+            ResultSet resultCount = statement3.executeQuery();
+            resultCount.first();
+            object_in.put("posts", resultCount.getInt(1));
             return object_in;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -171,15 +178,19 @@ public class DbUtils {
                                               String since,
                                               Integer limit) throws SQLException {
         String CURRENT_QUERY = GET_FORUM_LIST_POSTS_MAIN
-                            + GET_FORUM_LIST_POSTS_MAIN_CLAUSE
-                            + GET_FORUM_LIST_POSTS_ORDER_BY
-                            + GET_FORUM_LIST_POSTS_LIMIT
-                            + ";";
+                + GET_FORUM_LIST_POSTS_MAIN_CLAUSE
+                + GET_FORUM_LIST_POSTS_ORDER_BY
+                + " " + orderBy + " "
+                + GET_FORUM_LIST_POSTS_LIMIT
+                + ";";
         PreparedStatement statement = conn.prepareStatement(CURRENT_QUERY);
-        statement.setTimestamp(1, Timestamp.valueOf(since));
-        statement.setString(2, forum);
-        statement.setString(3, orderBy);
-        statement.setInt(4, limit);
+//        statement.setTimestamp(1, Timestamp.valueOf(since));
+        statement.setString(1, forum);
+        statement.setInt(3, limit);
+        statement.setTimestamp(2, Timestamp.valueOf(since));
+//        statement.setInt(4, limit);
+        System.out.println("LISNDJKLFKJLDFKJLDF " + limit);
+        System.out.println(statement);
         ResultSet resultSet = statement.executeQuery();
         JSONArray resultArray = new JSONArray();
         while (resultSet.next()) {
@@ -247,17 +258,19 @@ public class DbUtils {
                 object_in.put("user", DbUtils.getUserInfo(conn, resultSet.getString("posts.user")));
             }
 
-            if (!isThreadRelated) {
+
+            if (isThreadRelated) {
                 object_in.put("thread", DbUtils.getThreadInfo(conn, resultSet.getInt("posts.thread"), new ArrayList<String>()));
             } else {
                 object_in.put("thread", resultSet.getInt("posts.thread"));
             }
 
-            if (!isForumRelated) {
+            if (isForumRelated) {
                 object_in.put("forum", DbUtils.getForumInfo(conn, resultSet.getString("posts.forum"), null));
             } else {
                 object_in.put("forum", resultSet.getString("posts.forum"));
             }
+            System.out.println("ISTHREADRELATED " +  isThreadRelated);
             System.out.println(object_in.toString());
             return object_in;
         } catch (Exception e) {

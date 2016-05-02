@@ -117,10 +117,10 @@ public class CopyPasteWrappingDetails {
                 object_in2.put("isDeleted", resultSet2.getBoolean("isDeleted"));
 
                 Timestamp date2 = resultSet2.getTimestamp("date");
-                Date parsedDate2 = new Date(date.getTime());
+                Date parsedDate2 = new Date(date2.getTime());
                 SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                String formattedDate2 = sdf.format(parsedDate);
-                object_in2.put("date", formattedDate);
+                String formattedDate2 = sdf.format(parsedDate2);
+                object_in2.put("date", formattedDate2);
 
                 // Flags for related field
                 boolean isUserRelated2 = false, isForumRelated2 = false;
