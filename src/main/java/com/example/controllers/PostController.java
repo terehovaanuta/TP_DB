@@ -1,11 +1,17 @@
 package com.example.controllers;
 
+import com.example.DbUtils;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.sql.*;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+
 
 /**
  * Created by ann on 07.04.16.
@@ -13,17 +19,18 @@ import java.sql.*;
 
 @RestController
 public class PostController {
-    private final String CREATE_QUERY = "INSERT INTO posts (parent, isApproved, isHighlighted, isEdited, isSpam, isDeleted, date, thread, message, user, forum) VALUES (?, ?, ?, ?, ?, ?, DATE(?), ?, ?, ?, ?);";
+    private final String CREATE_QUERY = "INSERT INTO posts (parent, isApproved, isHighlighted, isEdited, isSpam, isDeleted, date, thread, message, user, forum) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
     private final String GET_USER_QUERY = "SELECT * FROM users WHERE email = ?;";
     private final String GET_FORUM_QUERY = "SELECT * FROM forums WHERE short_name = ?;";
 
-    // According to documentation, we take thread by id
     private final String GET_THREAD_QUERY = "SELECT * FROM threads WHERE id = ?;";
-    private final String GET_POST_QUERY = "SELECT * FROM posts WHERE message = ?;";
+    private final String GET_POST_QUERY = "SELECT * FROM posts WHERE message = ? AND user = ? AND thread = ?;";
+
+    private final String DETALIS_POST_TABLE = "SELECT * FROM posts WHERE post = ?;";
     @RequestMapping("db/api/post/create")
     public String createPost(@RequestBody String payload) {
         JSONObject object = new JSONObject(payload);
-        System.out.println(payload);
+//        System.out.println(payload);
         String date, message, user, forum;
         Integer thread;
         Integer parent = null;
@@ -48,44 +55,46 @@ public class PostController {
 
         try {
             parent = object.getInt("parent");
-            isApproved = object.getBoolean("isApproved");
-            isHighlighted = object.getBoolean("isHighlighted");
-            isEdited = object.getBoolean("isEdited");
-            isSpam = object.getBoolean("isSpam");
-            isDeleted = object.getBoolean("isDeleted");
         } catch (Exception e) {
             parent = null;
+        }
+
+        try {
+            isApproved = object.getBoolean("isApproved");
+        } catch (Exception e) {
             isApproved = null;
+        }
+
+        try {
+            isHighlighted = object.getBoolean("isHighlighted");
+        } catch (Exception e) {
             isHighlighted = null;
+        }
+
+        try {
+            isEdited = object.getBoolean("isEdited");
+        } catch (Exception e) {
             isEdited = null;
+        }
+
+        try {
+            isSpam = object.getBoolean("isSpam");
+        } catch (Exception e) {
             isSpam = null;
+        }
+
+        try {
+            isDeleted = object.getBoolean("isDeleted");
+        } catch (Exception e) {
             isDeleted = null;
         }
+
 
         try {
             Connection conn = DriverManager.getConnection("jdbc:mysql://localhost/DB_TP", "user1", "123");
             PreparedStatement statement = conn.prepareStatement(CREATE_QUERY);
 
-            // We need to set values separately, if they are null
-//            if (isDeleted != null || parent != null || isApproved != null || isHighlighted != null || isEdited != null || isSpam != null) {
-//                statement.setInt(1, parent);
-//                statement.setBoolean(2, isApproved);
-//                statement.setBoolean(3, isHighlighted);
-//                statement.setBoolean(4, isEdited);
-//                statement.setBoolean(5, isSpam);
-//                statement.setBoolean(6, isDeleted);
-//            } else {
-//                // TODO: think about making it null
-//                // statement.setInt(1, false);
-//                // I make it null, because default value is null
-//                statement.setNull(1, Types.INTEGER);
-//                statement.setBoolean(2, false);
-//                statement.setBoolean(3, false);
-//                statement.setBoolean(4, false);
-//                statement.setBoolean(5, false);
-//                statement.setBoolean(6, false);
-//            }
-            if (isDeleted != null) {
+           if (isDeleted != null) {
                 statement.setBoolean(6, isDeleted);
             } else {
                 statement.setBoolean(6, false);
@@ -101,6 +110,9 @@ public class PostController {
                 statement.setBoolean(2, false);
             }
             if (isHighlighted != null) {
+//                System.out.println(id);
+//                System.out.println(message);
+//                System.out.println("HIGHLIGHTED: " + isHighlighted);
                 statement.setBoolean(3, isHighlighted);
             } else {
                 statement.setBoolean(3, false);
@@ -116,7 +128,8 @@ public class PostController {
                 statement.setBoolean(5, false);
             }
 
-            statement.setString(7, date);
+            statement.setTimestamp(7, Timestamp.valueOf(date));
+//            statement.setString(7, date);
             statement.setInt(8, thread);
             statement.setString(9, message);
             statement.setString(10, user);
@@ -130,7 +143,6 @@ public class PostController {
             getStatementForum.setString(1, forum);
             ResultSet isForumCreated = getStatementForum.executeQuery();
             PreparedStatement getStatementThread = conn.prepareStatement(GET_THREAD_QUERY);
-//            getStatementThread.setString(1, thread);
             getStatementThread.setInt(1, thread);
             ResultSet isThreadCreated = getStatementThread.executeQuery();
             if (!isUserCreated.next() || !isForumCreated.next() || !isThreadCreated.next()) {
@@ -143,12 +155,13 @@ public class PostController {
             int numberOfRowsAffected = statement.executeUpdate();
             PreparedStatement getStatement = conn.prepareStatement(GET_POST_QUERY);
             getStatement.setString(1, message);
+            getStatement.setInt(3, thread);
+            getStatement.setString(2, user);
             ResultSet newPost = getStatement.executeQuery();
             if (newPost.next()) {
                 JSONObject wrappedObject = new JSONObject();
                 object = new JSONObject();
                 object.put("id", newPost.getInt("id"));
-//                object.put("date", newPost.getString("date"));
                 object.put("date", newPost.getDate("date"));
                 object.put("message", newPost.getString("message"));
                 object.put("user", newPost.getString("user"));
@@ -163,7 +176,7 @@ public class PostController {
 
                 wrappedObject.put("code", 0);
                 wrappedObject.put("response", object);
-                System.out.printf(wrappedObject.toString());
+//                System.out.printf(wrappedObject.toString());
                 return wrappedObject.toString();
             }
         } catch (SQLException e) {
@@ -177,4 +190,52 @@ public class PostController {
         return "";
     }
 
+    @RequestMapping("db/api/post/details")
+    public String postDetails(@RequestBody(required = false) String payload, @RequestParam Integer post, @RequestParam("related") ArrayList<String> related){
+        Connection conn = null;
+        JSONArray relatedArray;
+        ArrayList<String> relatedList = new ArrayList<>();
+        if (post == null) {
+            try {
+                JSONObject object = new JSONObject(payload);
+                post = object.getInt("post");
+                relatedArray = object.getJSONArray("related");
+                for(int index = 0; index < relatedArray.length(); index++) {
+                    relatedList.add(relatedArray.getString(index));
+                }
+            } catch (Exception e) {
+                JSONObject error = new JSONObject();
+                error.put("code", 3);
+                error.put("response", "Not null constraints failed");
+                return error.toString();
+            }
+        } else{
+            if (related != null) {
+                relatedList = related;
+            }
+        }
+
+        try {
+            conn = DriverManager.getConnection("jdbc:mysql://localhost/DB_TP", "user1", "123");
+            JSONObject returnObject = getPostInfo_forum(conn, post, relatedList);
+            System.out.println(returnObject.toString());
+            return returnObject.toString();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return "";
+    }
+
+    private JSONObject getPostInfo_forum(Connection conn, Integer post, ArrayList<String> related) {
+        try {
+            JSONObject object = new JSONObject();
+            JSONObject object_in = DbUtils.getPostInfo(conn, post, related);
+            object.put("code", 0);
+            object.put("response", object_in);
+            return object;
+        } catch (Exception e) {
+            return new JSONObject();
+        }
+    }
 }

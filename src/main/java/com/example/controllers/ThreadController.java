@@ -1,13 +1,14 @@
 package com.example.controllers;
 
+import com.example.DbUtils;
 import com.sun.org.apache.xpath.internal.operations.Bool;
+import org.apache.commons.lang3.StringEscapeUtils;
+import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.sql.*;
+import java.util.ArrayList;
 
 /**
  * Created by ann on 03.04.16.
@@ -15,10 +16,11 @@ import java.sql.*;
 
 @RestController
 public class ThreadController {
-    private final String CREATE_QUERY = "INSERT INTO threads (isDeleted, forum, title, isClosed, user, date, message, slug) VALUES (?, ?, ?, ?, ?, DATE(?), ?, ?);";
+    private final String CREATE_QUERY = "INSERT INTO threads (isDeleted, forum, title, isClosed, user, date, message, slug) VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
     private final String GET_USER_QUERY = "SELECT * FROM users WHERE email = ?;";
     private final String GET_FORUM_QUERY = "SELECT * FROM forums WHERE short_name = ?;";
     private final String GET_THREAD_QUERY = "SELECT * FROM threads WHERE title = ?;";
+
     @RequestMapping("db/api/thread/create")
     public String createThread(@RequestBody String payload) {
         JSONObject object = new JSONObject(payload);
@@ -29,7 +31,7 @@ public class ThreadController {
 
         try {
             forum = object.getString("forum");
-            title = object.getString("title");
+            title = StringEscapeUtils.escapeJava(object.getString("title"));
             user = object.getString("user");
             date = object.getString("date");
             message = object.getString("message");
@@ -64,7 +66,9 @@ public class ThreadController {
             statement.setString(3, title);
             statement.setBoolean(4, isClosed);
             statement.setString(5, user);
-            statement.setString(6, date);
+            System.out.println(date);
+            statement.setTimestamp(6, Timestamp.valueOf(date));
+//            statement.setString(6, date);
             statement.setString(7, message);
             statement.setString(8, slug);
             PreparedStatement getStatementUser = conn.prepareStatement(GET_USER_QUERY);
@@ -114,5 +118,58 @@ public class ThreadController {
         }
 
         return "";
+    }
+
+
+    @RequestMapping("db/api/thread/details")
+    public String threadDetails(@RequestBody(required = false) String payload, @RequestParam Integer thread, @RequestParam("related") ArrayList<String> related){
+        Connection conn = null;
+        JSONArray relatedArray;
+        ArrayList<String> relatedList = new ArrayList<>();
+        if (thread == null) {
+            try {
+                JSONObject object = new JSONObject(payload);
+                thread = object.getInt("thread");
+                relatedArray = object.getJSONArray("related");
+                for (int index = 0; index < relatedArray.length(); ++index) {
+                    relatedList.add(relatedArray.getString(index));
+                }
+//                    related = relatedArray.getString(0);
+//                } catch (Exception e) {
+////                    related = null;
+//                }
+            } catch (Exception e) {
+                JSONObject error = new JSONObject();
+                error.put("code", 3);
+                error.put("response", "Not null constraints failed");
+                return error.toString();
+            }
+        } else {
+            if (related != null) {
+                relatedList = related;
+            }
+        }
+
+        try {
+            conn = DriverManager.getConnection("jdbc:mysql://localhost/DB_TP", "user1", "123");
+            JSONObject returnObject = getThreadInfo_forum(conn, thread, relatedList);
+            return returnObject.toString();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return "";
+    }
+
+    private JSONObject getThreadInfo_forum(Connection conn, Integer thread, ArrayList<String> related) {
+        try {
+            JSONObject object = new JSONObject();
+            JSONObject object_in = DbUtils.getThreadInfo(conn, thread, related);
+            object.put("code", 0);
+            object.put("response", object_in);
+            return object;
+        } catch (Exception e) {
+            return new JSONObject();
+        }
     }
 }
