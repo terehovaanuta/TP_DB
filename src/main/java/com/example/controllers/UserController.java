@@ -26,6 +26,8 @@ public class UserController {
     private final String DETAILS_TABLE_USERS = "SELECT * FROM users WHERE email = ?;";
     private final String UPDATE_USER_QUERY = "UPDATE users SET name = ?, about = ? WHERE email = ?;";
 
+    private final String USER_FOLLOW_QUERY = "INSERT INTO followers (follower, followee) VALUES (?, ?);";
+
 
     @RequestMapping("db/api/user/create")
     public String createUser(@RequestBody String payload) {
@@ -195,5 +197,112 @@ public class UserController {
         }
 
     }
+
+    @RequestMapping("db/api/user/listPosts")
+    public String listPosts(@RequestBody(required = false) String payload,
+                            @RequestParam(required = false) String user,
+                            @RequestParam(required = false) String since,
+                            @RequestParam(required = false) String order,
+                            @RequestParam(required = false) Integer limit) {
+        Connection conn = null;
+        if (user == null) {
+            try {
+                JSONObject object = new JSONObject(payload);
+                user = object.getString("user");
+                try {
+                    since = object.getString("since");
+                } catch (Exception e) {
+                    since = "1970-01-01 00:00:01";
+                }
+                try {
+                    order = object.getString("order");
+                } catch (Exception e) {
+                    order = "desc";
+                }
+                limit = object.getInt("limit");
+                if (limit == 0) {
+                    limit = 1000000;
+                }
+            } catch (Exception e) {
+                JSONObject error = new JSONObject();
+                error.put("code", 3);
+                error.put("response", "Not null constraints failed");
+                return error.toString();
+            }
+        } else{
+            if (order == null) {
+                order = "desc";
+            }
+            if (limit == null) {
+                limit = 1000000;
+            }
+            if (since == null) {
+                since = "1970-01-01 00:00:01";
+            }
+        }
+        try {
+            conn = DriverManager.getConnection("jdbc:mysql://localhost/DB_TP", "user1", "123");
+            JSONObject object = new JSONObject();
+            JSONArray object_in = DbUtils.getUserPostsList(conn, user, order, since, limit);
+            object.put("code", 0);
+            object.put("response", object_in);
+//
+            System.out.println(object.toString());
+            return object.toString();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+    }
+
+
+
+    @RequestMapping("db/api/user/follow")
+    public String userFollow(@RequestBody String payload) {
+        Connection conn = null;
+        JSONObject object = new JSONObject(payload);
+        String follower = object.getString("follower");
+        String followee = object.getString("followee");
+        if (follower == null || followee == null) {
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+        return userFollowController(follower, followee);
+    }
+
+    private String userFollowController(String follower, String followee) {
+        Connection conn = null;
+        try {
+            conn = DriverManager.getConnection("jdbc:mysql://localhost/DB_TP", "user1", "123");
+            // Delete thread
+            PreparedStatement statement = null;
+            statement = conn.prepareStatement(USER_FOLLOW_QUERY);
+            statement.setString(1, follower);
+            statement.setString(2, followee);
+            statement.executeUpdate();
+
+
+            JSONObject answer = new JSONObject();
+            answer.put("code", 0);
+            JSONObject idObject = new JSONObject();
+            idObject.put("follower", follower);
+            idObject.put("followee", followee);
+            answer.put("response", idObject);
+            conn.close();
+            return answer.toString();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+    }
+
 }
 

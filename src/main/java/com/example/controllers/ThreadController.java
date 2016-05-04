@@ -30,6 +30,11 @@ public class ThreadController {
 
     private final String UPDATE_THREAD_QUERY = "UPDATE threads SET message = ?, slug = ? WHERE id = ?;";
 
+    private final String SUBSCRIBE_THREAD_QUERY = "INSERT INTO userThreadSubs (user, thread) VALUES (?, ?);";
+    private final String UNSUBSCRIBE_THREAD_QUERY = "DELETE FROM userThreadSubs WHERE user = ? AND thread = ?;";
+
+    private final String VOTE_THREAD_QUERY = "INSERT INTO threadVotes (likes, dislikes, vote, thread) VALUES (?, ?, ?, ?);";
+
     @RequestMapping("db/api/thread/create")
     public String createThread(@RequestBody String payload) {
         JSONObject object = new JSONObject(payload);
@@ -117,8 +122,10 @@ public class ThreadController {
                 wrappedObject.put("code", 0);
                 wrappedObject.put("response", object);
                 System.out.printf(wrappedObject.toString());
+                conn.close();
                 return wrappedObject.toString();
             }
+            conn.close();
         } catch (SQLException e) {
             JSONObject error = new JSONObject();
             error.put("code", 3);
@@ -162,6 +169,7 @@ public class ThreadController {
         try {
             conn = DriverManager.getConnection("jdbc:mysql://localhost/DB_TP", "user1", "123");
             JSONObject returnObject = getThreadInfo_forum(conn, thread, relatedList);
+            conn.close();
             return returnObject.toString();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -204,6 +212,7 @@ public class ThreadController {
             JSONObject idObject = new JSONObject();
             idObject.put("thread", thread);
             answer.put("response", idObject);
+            conn.close();
             return answer.toString();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -237,6 +246,7 @@ public class ThreadController {
             JSONObject idObject = new JSONObject();
             idObject.put("thread", thread);
             answer.put("response", idObject);
+            conn.close();
             return answer.toString();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -276,6 +286,7 @@ public class ThreadController {
             JSONObject idObject = new JSONObject();
             idObject.put("thread", thread);
             answer.put("response", idObject);
+            conn.close();
             return answer.toString();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -315,6 +326,7 @@ public class ThreadController {
             JSONObject idObject = new JSONObject();
             idObject.put("thread", thread);
             answer.put("response", idObject);
+            conn.close();
             return answer.toString();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -358,6 +370,7 @@ public class ThreadController {
             JSONObject idObject = new JSONObject();
             idObject.put("thread", thread);
             answer.put("response", DbUtils.getThreadInfo(conn, thread, new ArrayList<String>()));
+            conn.close();
             return answer.toString();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -369,4 +382,121 @@ public class ThreadController {
 
     }
 
+
+    @RequestMapping("db/api/thread/subscribe")
+    public String threadSubscribe(@RequestBody String payload) {
+        Connection conn = null;
+        JSONObject object = new JSONObject(payload);
+        Integer thread = object.getInt("thread");
+        String user = object.getString("user");
+        if (thread == 0 || user == null) {
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+        return threadSubscribeController(thread, user, true);
+    }
+
+    @RequestMapping("db/api/thread/unsubscribe")
+    public String threadUnsubscribe(@RequestBody String payload) {
+        Connection conn = null;
+        JSONObject object = new JSONObject(payload);
+        Integer thread = object.getInt("thread");
+        String user = object.getString("user");
+        if (thread == 0 || user == null) {
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+        return threadSubscribeController(thread, user, false);
+    }
+
+    @RequestMapping("db/api/thread/vote")
+    public String threadVote(@RequestBody String payload) {
+        Connection conn = null;
+        JSONObject object = new JSONObject(payload);
+        Integer thread = object.getInt("thread");
+        Integer vote = object.getInt("vote");
+        if (thread == 0 || vote == 0) {
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+        return threadVoteController(thread, vote);
+    }
+
+
+    private String threadSubscribeController(Integer thread, String user, boolean subscribe) {
+        Connection conn = null;
+        try {
+            conn = DriverManager.getConnection("jdbc:mysql://localhost/DB_TP", "user1", "123");
+            // Delete thread
+            // TODO: Добавить дополнительные проверки на то, что есть такой пользователь и такой thread!
+            PreparedStatement statement = null;
+            if (subscribe) {
+                statement = conn.prepareStatement(SUBSCRIBE_THREAD_QUERY);
+            } else {
+                statement = conn.prepareStatement(UNSUBSCRIBE_THREAD_QUERY);
+            }
+            statement.setString(1, user);
+            statement.setInt(2, thread);
+            statement.executeUpdate();
+
+
+            JSONObject answer = new JSONObject();
+            answer.put("code", 0);
+            JSONObject idObject = new JSONObject();
+            idObject.put("thread", thread);
+            idObject.put("user", user);
+            answer.put("response", idObject);
+            conn.close();
+            return answer.toString();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+    }
+
+
+    private String threadVoteController(Integer thread, Integer vote) {
+        Connection conn = null;
+        try {
+            conn = DriverManager.getConnection("jdbc:mysql://localhost/DB_TP", "user1", "123");
+            // Delete thread
+            PreparedStatement statement = null;
+            statement = conn.prepareStatement(VOTE_THREAD_QUERY);
+            if (vote == 1) {
+                statement.setInt(1, 1);
+                statement.setInt(2, 0);
+            } else {
+                statement.setInt(1, 0);
+                statement.setInt(2, 1);
+            }
+            statement.setInt(3, vote);
+            statement.setInt(4, thread);
+            statement.executeUpdate();
+
+
+            JSONObject answer = new JSONObject();
+            answer.put("code", 0);
+            JSONObject idObject = new JSONObject();
+            idObject.put("vote", vote);
+            idObject.put("thread", thread);
+            answer.put("response", idObject);
+            conn.close();
+            return answer.toString();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+    }
 }

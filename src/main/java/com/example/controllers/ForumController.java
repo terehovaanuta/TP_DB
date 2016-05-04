@@ -198,4 +198,138 @@ public class ForumController {
     }
 
 
+
+    @RequestMapping("db/api/forum/listThreads")
+    public String listThreads(@RequestBody(required = false) String payload,
+                            @RequestParam String forum,
+                            @RequestParam(required = false) String since,
+                            @RequestParam(required = false) String order,
+                            @RequestParam(required = false) Integer limit,
+                            @RequestParam(value = "related", required = false) ArrayList<String> related) {
+        Connection conn = null;
+        JSONArray relatedArray;
+        ArrayList<String> relatedList = new ArrayList<>();
+        if (forum == null) {
+            try {
+                JSONObject object = new JSONObject(payload);
+                forum = object.getString("forum");
+                relatedArray = object.getJSONArray("related");
+                try {
+                    since = object.getString("since");
+                } catch (Exception e) {
+                    since = "1970-01-01 00:00:01";
+                }
+                for(int index = 0; index < relatedArray.length(); index++) {
+                    relatedList.add(relatedArray.getString(index));
+                }
+                try {
+                    order = object.getString("order");
+                } catch (Exception e) {
+                    order = "desc";
+                }
+                limit = object.getInt("limit");
+                if (limit == 0) {
+                    limit = 1000000;
+                }
+            } catch (Exception e) {
+                JSONObject error = new JSONObject();
+                error.put("code", 3);
+                error.put("response", "Not null constraints failed");
+                return error.toString();
+            }
+        } else{
+            if (related != null) {
+                relatedList = related;
+            }
+            if (order == null) {
+                order = "desc";
+            }
+            if (limit == null) {
+                limit = 1000000;
+            }
+            if (since == null) {
+                since = "1970-01-01 00:00:01";
+            }
+        }
+        try {
+            conn = DriverManager.getConnection("jdbc:mysql://localhost/DB_TP", "user1", "123");
+            JSONObject object = new JSONObject();
+            JSONArray object_in = DbUtils.getForumThreadssList(conn, relatedList, forum, order, since, limit);
+            object.put("code", 0);
+            object.put("response", object_in);
+//
+            System.out.println(object.toString());
+            return object.toString();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+    }
+
+
+
+
+    @RequestMapping("db/api/forum/listUsers")
+    public String listUserss(@RequestBody(required = false) String payload,
+                              @RequestParam String forum,
+                              @RequestParam(required = false) String since,
+                              @RequestParam(required = false) String order,
+                              @RequestParam(required = false) Integer limit) {
+        Connection conn = null;
+        if (forum == null) {
+            try {
+                JSONObject object = new JSONObject(payload);
+                forum = object.getString("forum");
+                try {
+                    since = object.getString("since");
+                } catch (Exception e) {
+                    since = "1970-01-01 00:00:01";
+                }
+                try {
+                    order = object.getString("order");
+                } catch (Exception e) {
+                    order = "desc";
+                }
+                limit = object.getInt("limit");
+                if (limit == 0) {
+                    limit = 1000000;
+                }
+            } catch (Exception e) {
+                JSONObject error = new JSONObject();
+                error.put("code", 3);
+                error.put("response", "Not null constraints failed");
+                return error.toString();
+            }
+        } else{
+            if (order == null) {
+                order = "desc";
+            }
+            if (limit == null) {
+                limit = 1000000;
+            }
+            if (since == null) {
+                since = "1970-01-01 00:00:01";
+            }
+        }
+        try {
+            conn = DriverManager.getConnection("jdbc:mysql://localhost/DB_TP", "user1", "123");
+            JSONObject object = new JSONObject();
+            JSONArray object_in = DbUtils.getForumUsersList(conn, forum, order, since, limit);
+            object.put("code", 0);
+            object.put("response", object_in);
+//
+            System.out.println(object.toString());
+            return object.toString();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+    }
+
 }

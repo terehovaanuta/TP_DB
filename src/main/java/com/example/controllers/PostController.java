@@ -33,6 +33,8 @@ public class PostController {
 
     private final String UPDATE_POST_QUERY = "UPDATE posts SET message = ? WHERE id = ?;";
 
+    private final String POST_VOTE_QUERY = "INSERT INTO postVotes (likes, dislikes, vote, post) VALUES (?, ?, ?, ?);";
+
     @RequestMapping("db/api/post/create")
     public String createPost(@RequestBody String payload) {
         JSONObject object = new JSONObject(payload);
@@ -356,6 +358,57 @@ public class PostController {
             return error.toString();
         }
 
+    }
+
+    @RequestMapping("db/api/post/vote")
+    public String postVote(@RequestBody String payload) {
+        Connection conn = null;
+        JSONObject object = new JSONObject(payload);
+        Integer post = object.getInt("post");
+        Integer vote = object.getInt("vote");
+        if (post == 0 || vote == 0) {
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
+        return postVoteController(post, vote);
+    }
+
+    private String postVoteController(Integer post, Integer vote) {
+        Connection conn = null;
+        try {
+            conn = DriverManager.getConnection("jdbc:mysql://localhost/DB_TP", "user1", "123");
+            // Delete thread
+            PreparedStatement statement = null;
+            statement = conn.prepareStatement(POST_VOTE_QUERY);
+            if (vote == 1) {
+                statement.setInt(1, 1);
+                statement.setInt(2, 0);
+            } else {
+                statement.setInt(1, 0);
+                statement.setInt(2, 1);
+            }
+            statement.setInt(3, vote);
+            statement.setInt(4, post);
+            statement.executeUpdate();
+
+
+            JSONObject answer = new JSONObject();
+            answer.put("code", 0);
+            JSONObject idObject = new JSONObject();
+            idObject.put("vote", vote);
+            idObject.put("post", post);
+            answer.put("response", idObject);
+            conn.close();
+            return answer.toString();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("code", 3);
+            error.put("response", "Not null constraints failed");
+            return error.toString();
+        }
     }
 
 }

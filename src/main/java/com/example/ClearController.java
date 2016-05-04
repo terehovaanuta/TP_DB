@@ -19,6 +19,12 @@ public class ClearController {
     private final String TRUNCATE_TABLE_FORUMS = "TRUNCATE TABLE forums;";
     private final String TRUNCATE_TABLE_THREADS = "TRUNCATE TABLE threads;";
     private final String TRUNCATE_TABLE_POSTS = "TRUNCATE TABLE posts;";
+    private final String TRUNCATE_SUBSCRIPTIONS = "TRUNCATE TABLE userThreadSubs;";
+    private final String TRUNCATE_THREAD_VOTES = "TRUNCATE TABLE threadVotes;";
+    private final String TRUNCATE_POST_VOTES = "TRUNCATE TABLE postVotes;";
+    private final String TRUNCATE_USER_FOLLOW = "TRUNCATE TABLE followers;";
+
+
     @RequestMapping("db/api/clear")
     public String clearTables() {
         Connection conn = null;
@@ -32,6 +38,16 @@ public class ClearController {
             statement.execute();
             statement = conn.prepareStatement(TRUNCATE_TABLE_POSTS);
             statement.execute();
+            statement = conn.prepareStatement(TRUNCATE_SUBSCRIPTIONS);
+            statement.execute();
+            statement = conn.prepareStatement(TRUNCATE_THREAD_VOTES);
+            statement.execute();
+            statement = conn.prepareStatement(TRUNCATE_POST_VOTES);
+            statement.execute();
+            statement = conn.prepareStatement(TRUNCATE_USER_FOLLOW);
+            statement.execute();
+
+            conn.close();
             JSONObject object = new JSONObject();
             object.put("code", 0);
             object.put("response", "OK");
